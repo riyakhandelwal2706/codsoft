@@ -1,0 +1,98 @@
+#credit card fraud detection
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score, mean_squared_error, mean_absolute_error, accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.pipeline import Pipeline
+
+# Load the dataset
+data = pd.read_csv('/creditcard.csv')
+
+# Display dataset structure and first few entries
+print("Dataset Columns:", data.columns)
+print(data.head())
+
+# Identify missing values and data types
+print("\nMissing Values in Each Column:")
+print(data.isnull().sum())
+print("\nData Types of Each Column:")
+print(data.dtypes)
+
+# Handle any missing values by filling with mean values
+data.fillna(data.mean(), inplace=True)
+
+# Check for infinite values in the dataset
+if np.any(np.isinf(data.values)):
+    raise ValueError("Infinite values found in the dataset.")
+
+# Verify and scale the numerical features
+features_to_scale = ['Amount', 'Time']
+print("\nColumns Available for Scaling:", data.columns)
+
+for feature in features_to_scale:
+    if feature not in data.columns:
+        raise KeyError(f"Expected column '{feature}' not found in the dataset.")
+
+scaler = MinMaxScaler()
+data[features_to_scale] = scaler.fit_transform(data[features_to_scale])
+print("\nScaled Data (First 5 Rows):")
+print(data[features_to_scale].head())
+
+# Define features and target variable
+X = data.drop('Class', axis=1)
+y = data['Class']
+
+# Display dimensions of the feature and target datasets
+print("\nFeature Set Dimensions:", X.shape)
+print("Target Set Dimensions:", y.shape)
+
+# Address class imbalance with a combination of SMOTE and RandomUnderSampler
+smote = SMOTE(random_state=42)
+under_sampler = RandomUnderSampler(random_state=42)
+resample_pipeline = Pipeline(steps=[('over_sampling', smote), ('under_sampling', under_sampler)])
+X_resampled, y_resampled = resample_pipeline.fit_resample(X, y)
+
+# Check dimensions after resampling
+print("\nResampled Feature Set Dimensions:", X_resampled.shape)
+print("Resampled Target Set Dimensions:", y_resampled.shape)
+
+# Split data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
+
+# Display dimensions of training and test sets
+print("\nTraining Set Dimensions:", X_train.shape)
+print("Test Set Dimensions:", X_test.shape)
+
+# Train and evaluate Logistic Regression model
+print("\nTraining Logistic Regression Model...")
+logistic_model = LogisticRegression(random_state=42, max_iter=1000)
+logistic_model.fit(X_train, y_train)
+print("Logistic Regression Model Trained.")
+
+print("\nEvaluating Logistic Regression Model...")
+logistic_predictions = logistic_model.predict(X_test)
+print("Logistic Regression Evaluation Metrics:")
+print("ROC-AUC Score:", roc_auc_score(y_test, logistic_predictions))
+print("Mean Squared Error:", mean_squared_error(y_test, logistic_predictions))
+print("Mean Absolute Error:", mean_absolute_error(y_test, logistic_predictions))
+
+# Train and evaluate Random Forest model
+print("\nTraining Random Forest Model...")
+random_forest_model = RandomForestClassifier(random_state=42, n_estimators=10, n_jobs=-1)
+random_forest_model.fit(X_train, y_train)
+print("Random Forest Model Trained.")
+
+print("\nEvaluating Random Forest Model...")
+rf_predictions = random_forest_model.predict(X_test)
+print("\nRandom Forest Evaluation Metrics:")
+print("Accuracy:", accuracy_score(y_test, rf_predictions))
+print("Precision:", precision_score(y_test, rf_predictions))
+print("Recall:", recall_score(y_test, rf_predictions))
+print("F1-Score:", f1_score(y_test, rf_predictions))
+print("\nClassification Report:\n", classification_report(y_test, rf_predictions))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, rf_predictions))
