@@ -1,0 +1,71 @@
+# advertising dataset analysis
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import os
+import statsmodels.api as sm
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+import warnings
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+# Load the advertising dataset
+ads_data = pd.read_csv("/content/advertising.csv")
+
+# If 'Unnamed: 0' column exists, rename it to 'Index'
+if 'Unnamed: 0' in ads_data.columns:
+    ads_data.rename(columns={'Unnamed: 0': 'Index'}, inplace=True)
+
+# Scatter plots to explore linear relationships between predictors and target variable (Sales)
+sns.pairplot(ads_data, x_vars=["TV", "Radio", "Newspaper"], y_vars="Sales", kind="reg")
+
+# Histograms to check the distribution of the target variable (Sales)
+ads_data['Sales'].hist(bins=20)
+plt.title('Histogram of Sales')
+plt.xlabel('Sales')
+plt.ylabel('Frequency')
+plt.show()
+
+# Linear regression plots to visualize the impact of each feature on Sales
+sns.lmplot(x='TV', y='Sales', data=ads_data)
+sns.lmplot(x='Radio', y='Sales', data=ads_data)
+sns.lmplot(x='Newspaper', y='Sales', data=ads_data)
+
+# Heatmap to check for correlations between variables
+correlation_matrix = ads_data.corr()
+plt.figure(figsize=(10, 7))
+sns.heatmap(correlation_matrix, annot=True, cmap="YlGnBu")
+plt.title('Correlation Heatmap')
+plt.show()
+
+# Preparing data for modeling
+X = ads_data.drop('Sales', axis=1)
+y = ads_data['Sales']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=46)
+
+# Initialize and train the linear regression model
+lr_model = LinearRegression()
+lr_model.fit(X_train, y_train)
+
+# Output the model's coefficients and intercept
+print("Model Coefficients:", lr_model.coef_)
+print("Model Intercept:", lr_model.intercept_)
+
+# Evaluate the model's performance
+predictions = lr_model.predict(X_test)
+rmse = np.sqrt(mean_squared_error(y_test, predictions))
+print(f"Root Mean Squared Error (RMSE): {rmse:.2f}")
+
+# Predict Sales for new data points
+new_data_1 = pd.DataFrame({'TV': [100], 'Radio': [50], 'Newspaper': [25]})
+predicted_sales_1 = lr_model.predict(new_data_1)
+print(f"Predicted Sales for TV=100, Radio=50, Newspaper=25: {predicted_sales_1[0]:.2f}")
+
+new_data_2 = pd.DataFrame({'TV': [25], 'Radio': [63], 'Newspaper': [80]})
+predicted_sales_2 = lr_model.predict(new_data_2)
+print(f"Predicted Sales for TV=25, Radio=63, Newspaper=80: {predicted_sales_2[0]:.2f}")
